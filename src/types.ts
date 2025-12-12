@@ -57,6 +57,18 @@ export interface ContourTileOptions {
   buffer?: number;
   /** When overzooming tiles, subsample to scale up to at least this size to make the contour lines smoother at higher zooms. */
   subsampleBelow?: number;
+  /** Name of the vector tile layer to put contour polygons in (default "contour-polygons") */
+  polygonLayer?: string;
+  /** Key for the lower elevation boundary on polygon features */
+  lowerElevationKey?: string;
+  /** Key for the upper elevation boundary on polygon features */
+  upperElevationKey?: string;
+  /** Grid spacing in pixels for spot soundings (if undefined, no spot soundings are generated) */
+  spotGridSpacing?: number;
+  /** Sort order for spot soundings in vector tiles: "asc" (ascending elevation) or "desc" (descending elevation). Default: "desc" */
+  spotSortOrder?: "asc" | "desc";
+  /** Name of the vector tile layer to put spot soundings in (default "spot-soundings") */
+  spotLayer?: string;
 }
 
 export interface GlobalContourTileOptions extends ContourTileOptions {
@@ -68,11 +80,28 @@ export interface GlobalContourTileOptions extends ContourTileOptions {
    * The `level` tag on each contour line will have an integer that corresponds to the largest index in
    * this array that the elevation is a multiple of.
    */
-  thresholds: { [n: number]: number | number[] };
+  thresholds?: { [n: number]: number | number[] };
+  /**
+   * Map from zoom level to fixed elevation levels for contour lines.
+   *
+   * Unlike thresholds which define intervals, this specifies exact elevations (e.g., [100, 200, 500, 1000]).
+   * Contour lines without an entry will use the levels for the next lower zoom.
+   *
+   * Cannot be used together with thresholds - use one or the other.
+   */
+  lineLevels?: { [n: number]: number[] };
+  /**
+   * Map from zoom level to fixed elevation levels for polygon generation.
+   *
+   * Defines exact elevations for isoband polygons per zoom level (e.g., [500, 700, 900, 1000]).
+   * Polygons without an entry will use the levels for the next lower zoom.
+   */
+  polygonLevels?: { [n: number]: number[] };
 }
 
 export interface IndividualContourTileOptions extends ContourTileOptions {
-  levels: number[];
+  lineLevels?: number[];
+  polygonLevels?: number[];
 }
 
 export interface Image {

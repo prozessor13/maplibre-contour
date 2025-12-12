@@ -2,7 +2,8 @@ import AsyncCache from "./cache";
 import defaultDecodeImage from "./decode-image";
 import { HeightTile } from "./height-tile";
 import generateIsolines from "./isolines";
-import { encodeIndividualOptions, isAborted, withTimeout } from "./utils";
+import generateIsobands from "./isobands";
+import { copy, encodeIndividualOptions, generateJitteredGrid, isAborted, withTimeout } from "./utils";
 import type {
   ContourTile,
   DecodeImageFunction,
@@ -163,18 +164,24 @@ export class LocalDemManager implements DemManager {
     timer?: Timer,
   ): Promise<ContourTile> {
     const {
-      levels,
       multiplier = 1,
       buffer = 1,
       extent = 4096,
-      contourLayer = "contours",
-      elevationKey = "ele",
-      levelKey = "level",
       subsampleBelow = 100,
+      contourLayer = "contours",
+      lineLevels,
+      polygonLevels,
+      elevationKey = "ele",
+      lowerElevationKey = "lower",
+      upperElevationKey = "upper",
+      levelKey = "level",
+      spotGridSpacing,
+      spotSortOrder = "desc",
+      spotLayer = "spot-soundings",
     } = options;
 
     // no levels means less than min zoom with levels specified
-    if (!levels || levels.length === 0) {
+    if (!((lineLevels && lineLevels.length) || (polygonLevels && polygonLevels.length))) {
       return Promise.resolve({ arrayBuffer: new ArrayBuffer(0) });
     }
     const key = [z, x, y, encodeIndividualOptions(options)].join("/");
@@ -219,37 +226,95 @@ export class LocalDemManager implements DemManager {
           .scaleElevation(multiplier)
           .materialize(1);
 
-        const isolines = generateIsolines(
-          levels[0],
-          virtualTile,
-          extent,
-          buffer,
-        );
+        const features = [] as any;
+
+        // Generate contour lines
+        if (lineLevels && lineLevels.length > 0) {
+          const isolines = generateIsolines(
+            lineLevels[0],
+            virtualTile,
+            extent,
+            buffer,
+          );
+
+          Object.entries(isolines).forEach(([eleString, geom]) => {
+            const ele = Number(eleString);
+            features.push({
+              type: GeomType.LINESTRING,
+              geometry: geom,
+              properties: {
+                [elevationKey]: ele,
+                [levelKey]: Math.max(
+                  ...lineLevels.map((l, i) => (ele % l === 0 ? i : 0)),
+                ),
+              },
+            });
+          });
+        }
+
+        // Generate contour polygons
+        if (polygonLevels && polygonLevels.length > 0) {
+          const isobands = generateIsobands(
+            polygonLevels,
+            virtualTile,
+            extent,
+            buffer,
+          );
+
+          Object.entries(isobands).map(([rangeStr, geoms]) => {
+            const [lower, upper] = rangeStr.split("-").map(Number);
+            geoms.map((geom) => {
+              features.push({
+                type: GeomType.POLYGON,
+                geometry: [geom],
+                properties: {
+                  [lowerElevationKey]: lower,
+                  [upperElevationKey]: upper,
+                },
+              });
+            });
+          });
+        }
+
+        // Generate spot soundings
+        const spotFeatures = [] as any;
+        if (spotGridSpacing) {
+          const spacingInExtent = (spotGridSpacing / 512) * extent;
+          const gridPoints = generateJitteredGrid(0, 0, extent, extent, spacingInExtent, x, y, z);
+          for (const [px, py] of gridPoints) {
+            const tileX = Math.floor((px / extent) * virtualTile.width);
+            const tileY = Math.floor((py / extent) * virtualTile.height);
+            if (tileX >= 0 && tileX < virtualTile.width && tileY >= 0 && tileY < virtualTile.height) {
+              const elevation = virtualTile.get(tileX, tileY);
+              spotFeatures.push({
+                type: GeomType.POINT,
+                geometry: [[px, py]],
+                properties: {
+                  [elevationKey]: elevation,
+                },
+              });
+            }
+          }
+
+          spotFeatures.sort((a: any, b: any) => {
+            const eleA = a.properties[elevationKey];
+            const eleB = b.properties[elevationKey];
+            return spotSortOrder === "asc" ? eleA - eleB : eleB - eleA;
+          });
+        }
 
         mark?.();
+        const layers: any = { [contourLayer]: { features } };
+        if (spotFeatures.length > 0) {
+          layers[spotLayer] = { features: spotFeatures };
+        }
         const result = encodeVectorTile({
           extent,
-          layers: {
-            [contourLayer]: {
-              features: Object.entries(isolines).map(([eleString, geom]) => {
-                const ele = Number(eleString);
-                return {
-                  type: GeomType.LINESTRING,
-                  geometry: geom,
-                  properties: {
-                    [elevationKey]: ele,
-                    [levelKey]: Math.max(
-                      ...levels.map((l, i) => (ele % l === 0 ? i : 0)),
-                    ),
-                  },
-                };
-              }),
-            },
-          },
+          layers,
         });
         mark?.();
 
-        return { arrayBuffer: result.slice().buffer };
+        return { arrayBuffer: copy(result.buffer as ArrayBuffer) };
       },
       parentAbortController,
     );
