@@ -34,11 +34,40 @@ function decodeThresholds(thresholds: string): {
   );
 }
 
+function encodeLevels(levels: { [n: number]: number[] }): string {
+  return sortedEntries(levels)
+    .map(([key, value]) => [key, ...value].join("*"))
+    .join("~");
+}
+
+function decodeLevels(levels: string): {
+  [n: number]: number[];
+} {
+  return Object.fromEntries(
+    levels
+      .split("~")
+      .map((part) => part.split("*").map(Number))
+      .map(([key, ...values]) => [key, values]),
+  );
+}
+
 export function encodeOptions({
   thresholds,
+  lineLevels,
+  polygonLevels,
   ...rest
 }: GlobalContourTileOptions): string {
-  return sortedEntries({ thresholds: encodeThresholds(thresholds), ...rest })
+  const encoded: any = { ...rest };
+  if (thresholds) {
+    encoded.thresholds = encodeThresholds(thresholds);
+  }
+  if (lineLevels) {
+    encoded.lineLevels = encodeLevels(lineLevels);
+  }
+  if (polygonLevels) {
+    encoded.polygonLevels = encodeLevels(polygonLevels);
+  }
+  return sortedEntries(encoded)
     .map(
       ([key, value]) =>
         `${encodeURIComponent(key)}=${encodeURIComponent(value)}`,
@@ -58,6 +87,10 @@ export function decodeOptions(options: string): GlobalContourTileOptions {
         switch (k) {
           case "thresholds":
             v = decodeThresholds(v);
+            break;
+          case "lineLevels":
+          case "polygonLevels":
+            v = decodeLevels(v);
             break;
           case "extent":
           case "multiplier":
@@ -82,21 +115,50 @@ export function getOptionsForZoom(
   options: GlobalContourTileOptions,
   zoom: number,
 ): IndividualContourTileOptions {
-  const { thresholds, ...rest } = options;
+  const { thresholds, lineLevels, polygonLevels, ...rest } = options;
 
-  let levels: number[] = [];
-  let maxLessThanOrEqualTo: number = -Infinity;
+  let lineLevelsForZoom: number[] = [];
+  let polygonLevelsForZoom: number[] | undefined = undefined;
 
-  Object.entries(thresholds).forEach(([zString, value]) => {
-    const z = Number(zString);
-    if (z <= zoom && z > maxLessThanOrEqualTo) {
-      maxLessThanOrEqualTo = z;
-      levels = typeof value === "number" ? [value] : value;
-    }
-  });
+  // Process thresholds (interval-based contour lines)
+  if (thresholds) {
+    let maxLessThanOrEqualTo: number = -Infinity;
+    Object.entries(thresholds).forEach(([zString, value]) => {
+      const z = Number(zString);
+      if (z <= zoom && z > maxLessThanOrEqualTo) {
+        maxLessThanOrEqualTo = z;
+        lineLevelsForZoom = typeof value === "number" ? [value] : value;
+      }
+    });
+  }
+
+  // Process lineLevels (fixed elevation contour lines)
+  if (lineLevels) {
+    let maxLessThanOrEqualTo: number = -Infinity;
+    Object.entries(lineLevels).forEach(([zString, value]) => {
+      const z = Number(zString);
+      if (z <= zoom && z > maxLessThanOrEqualTo) {
+        maxLessThanOrEqualTo = z;
+        lineLevelsForZoom = value;
+      }
+    });
+  }
+
+  // Process polygonLevels (fixed elevation polygon levels per zoom)
+  if (polygonLevels) {
+    let maxLessThanOrEqualTo: number = -Infinity;
+    Object.entries(polygonLevels).forEach(([zString, value]) => {
+      const z = Number(zString);
+      if (z <= zoom && z > maxLessThanOrEqualTo) {
+        maxLessThanOrEqualTo = z;
+        polygonLevelsForZoom = value;
+      }
+    });
+  }
 
   return {
-    levels,
+    lineLevels: lineLevelsForZoom,
+    polygonLevels: polygonLevelsForZoom,
     ...rest,
   };
 }
