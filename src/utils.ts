@@ -321,8 +321,8 @@ export function generateJitteredGrid(
 
   for (let i = 0; i <= nx; i++) {
     for (let j = 0; j <= ny; j++) {
-      const dx = random() * spacing / 2;
-      const dy = random() * spacing / 2;
+      const dx = (random() * spacing) / 2;
+      const dy = (random() * spacing) / 2;
       const x = minx + i * spacing + dx + spacing / 4;
       const y = miny + j * spacing + dy + spacing / 4;
       if (x < maxx && y < maxy) {
