@@ -3,7 +3,13 @@ import defaultDecodeImage from "./decode-image";
 import { HeightTile } from "./height-tile";
 import generateIsolines from "./isolines";
 import generateIsobands from "./isobands";
-import { copy, encodeIndividualOptions, generateJitteredGrid, isAborted, withTimeout } from "./utils";
+import {
+  copy,
+  encodeIndividualOptions,
+  generateJitteredGrid,
+  isAborted,
+  withTimeout,
+} from "./utils";
 import type {
   ContourTile,
   DecodeImageFunction,
@@ -181,7 +187,12 @@ export class LocalDemManager implements DemManager {
     } = options;
 
     // no levels means less than min zoom with levels specified
-    if (!((lineLevels && lineLevels.length) || (polygonLevels && polygonLevels.length))) {
+    if (
+      !(
+        (lineLevels && lineLevels.length) ||
+        (polygonLevels && polygonLevels.length)
+      )
+    ) {
       return Promise.resolve({ arrayBuffer: new ArrayBuffer(0) });
     }
     const key = [z, x, y, encodeIndividualOptions(options)].join("/");
@@ -280,11 +291,25 @@ export class LocalDemManager implements DemManager {
         const spotFeatures = [] as any;
         if (spotGridSpacing) {
           const spacingInExtent = (spotGridSpacing / 512) * extent;
-          const gridPoints = generateJitteredGrid(0, 0, extent, extent, spacingInExtent, x, y, z);
+          const gridPoints = generateJitteredGrid(
+            0,
+            0,
+            extent,
+            extent,
+            spacingInExtent,
+            x,
+            y,
+            z,
+          );
           for (const [px, py] of gridPoints) {
             const tileX = Math.floor((px / extent) * virtualTile.width);
             const tileY = Math.floor((py / extent) * virtualTile.height);
-            if (tileX >= 0 && tileX < virtualTile.width && tileY >= 0 && tileY < virtualTile.height) {
+            if (
+              tileX >= 0 &&
+              tileX < virtualTile.width &&
+              tileY >= 0 &&
+              tileY < virtualTile.height
+            ) {
               const elevation = virtualTile.get(tileX, tileY);
               spotFeatures.push({
                 type: GeomType.POINT,
