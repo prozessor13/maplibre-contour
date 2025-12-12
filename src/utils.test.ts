@@ -89,7 +89,6 @@ test("extract levels from global contour options", () => {
 
 test("encode individual options", () => {
   const options: IndividualContourTileOptions = {
-    levels: [1, 2],
     contourLayer: "contour layer",
     elevationKey: "elevation key",
     extent: 123,

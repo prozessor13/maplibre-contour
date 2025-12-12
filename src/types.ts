@@ -63,6 +63,12 @@ export interface ContourTileOptions {
   lowerElevationKey?: string;
   /** Key for the upper elevation boundary on polygon features */
   upperElevationKey?: string;
+  /** Grid spacing in pixels for spot soundings (if undefined, no spot soundings are generated) */
+  spotGridSpacing?: number;
+  /** Sort order for spot soundings in vector tiles: "asc" (ascending elevation) or "desc" (descending elevation). Default: "desc" */
+  spotSortOrder?: "asc" | "desc";
+  /** Name of the vector tile layer to put spot soundings in (default "spot-soundings") */
+  spotLayer?: string;
 }
 
 export interface GlobalContourTileOptions extends ContourTileOptions {

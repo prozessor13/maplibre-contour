@@ -274,3 +274,62 @@ export function onAbort(
 export function isAborted(abortController?: AbortController): boolean {
   return Boolean(abortController?.signal?.aborted);
 }
+
+/**
+ * Simple seeded random number generator (LCG)
+ * Returns a function that generates pseudorandom numbers between 0 and 1
+ */
+function seededRandom(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 1664525 + 1013904223) % 4294967296;
+    return state / 4294967296;
+  };
+}
+
+/**
+ * Generate a jittered grid of points for spot soundings.
+ *
+ * @param minx - Minimum x coordinate (in tile coordinates)
+ * @param miny - Minimum y coordinate (in tile coordinates)
+ * @param maxx - Maximum x coordinate (in tile coordinates)
+ * @param maxy - Maximum y coordinate (in tile coordinates)
+ * @param spacing - Grid spacing in tile coordinates
+ * @param tileX - Tile X coordinate (for seeding)
+ * @param tileY - Tile Y coordinate (for seeding)
+ * @param tileZ - Tile Z coordinate (for seeding)
+ * @returns Array of [x, y] coordinates
+ */
+export function generateJitteredGrid(
+  minx: number,
+  miny: number,
+  maxx: number,
+  maxy: number,
+  spacing: number,
+  tileX: number,
+  tileY: number,
+  tileZ: number,
+): [number, number][] {
+  const nx = Math.floor((maxx - minx) / spacing);
+  const ny = Math.floor((maxy - miny) / spacing);
+
+  const points: [number, number][] = [];
+
+  // Use tile coordinates for seeding to ensure consistent jitter across tiles
+  const seed = tileZ * 1000000 + tileX * 1000 + tileY;
+  const random = seededRandom(seed);
+
+  for (let i = 0; i <= nx; i++) {
+    for (let j = 0; j <= ny; j++) {
+      const dx = random() * spacing / 2;
+      const dy = random() * spacing / 2;
+      const x = minx + i * spacing + dx + spacing / 4;
+      const y = miny + j * spacing + dy + spacing / 4;
+      if (x < maxx && y < maxy) {
+        points.push([x, y]);
+      }
+    }
+  }
+
+  return points;
+}

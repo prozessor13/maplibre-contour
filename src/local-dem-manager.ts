@@ -3,7 +3,7 @@ import defaultDecodeImage from "./decode-image";
 import { HeightTile } from "./height-tile";
 import generateIsolines from "./isolines";
 import generateIsobands from "./isobands";
-import { copy, encodeIndividualOptions, isAborted, withTimeout } from "./utils";
+import { copy, encodeIndividualOptions, generateJitteredGrid, isAborted, withTimeout } from "./utils";
 import type {
   ContourTile,
   DecodeImageFunction,
@@ -175,6 +175,9 @@ export class LocalDemManager implements DemManager {
       lowerElevationKey = "lower",
       upperElevationKey = "upper",
       levelKey = "level",
+      spotGridSpacing,
+      spotSortOrder = "desc",
+      spotLayer = "spot-soundings",
     } = options;
 
     // no levels means less than min zoom with levels specified
@@ -273,10 +276,41 @@ export class LocalDemManager implements DemManager {
           });
         }
 
+        // Generate spot soundings
+        const spotFeatures = [] as any;
+        if (spotGridSpacing) {
+          const spacingInExtent = (spotGridSpacing / 512) * extent;
+          const gridPoints = generateJitteredGrid(0, 0, extent, extent, spacingInExtent, x, y, z);
+          for (const [px, py] of gridPoints) {
+            const tileX = Math.floor((px / extent) * virtualTile.width);
+            const tileY = Math.floor((py / extent) * virtualTile.height);
+            if (tileX >= 0 && tileX < virtualTile.width && tileY >= 0 && tileY < virtualTile.height) {
+              const elevation = virtualTile.get(tileX, tileY);
+              spotFeatures.push({
+                type: GeomType.POINT,
+                geometry: [[px, py]],
+                properties: {
+                  [elevationKey]: elevation,
+                },
+              });
+            }
+          }
+
+          spotFeatures.sort((a: any, b: any) => {
+            const eleA = a.properties[elevationKey];
+            const eleB = b.properties[elevationKey];
+            return spotSortOrder === "asc" ? eleA - eleB : eleB - eleA;
+          });
+        }
+
         mark?.();
+        const layers: any = { [contourLayer]: { features } };
+        if (spotFeatures.length > 0) {
+          layers[spotLayer] = { features: spotFeatures };
+        }
         const result = encodeVectorTile({
           extent,
-          layers: { [contourLayer]: { features } }
+          layers,
         });
         mark?.();
 
