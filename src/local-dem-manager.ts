@@ -188,7 +188,6 @@ export class LocalDemManager implements DemManager {
       spotLayer = "spot-soundings",
     } = options;
 
-
     // no levels means less than min zoom with levels specified
     if (
       !(
