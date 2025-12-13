@@ -191,6 +191,7 @@ export class LocalDemManager implements DemManager {
     // no levels means less than min zoom with levels specified
     if (
       !(
+        (thresholds && thresholds.length) ||
         (lineLevels && lineLevels.length) ||
         (polygonLevels && polygonLevels.length)
       )

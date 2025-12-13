@@ -71,22 +71,26 @@ test("extract levels from global contour options", () => {
   const { thresholds, ...rest } = fullGlobalOptions;
   expect(getOptionsForZoom(fullGlobalOptions, 9)).toEqual({
     ...rest,
-    lineLevels: [],
+    thresholds: undefined,
+    lineLevels: undefined,
     polygonLevels: undefined,
   });
   expect(getOptionsForZoom(fullGlobalOptions, 10)).toEqual({
     ...rest,
-    lineLevels: [500],
+    thresholds: [500],
+    lineLevels: undefined,
     polygonLevels: undefined,
   });
   expect(getOptionsForZoom(fullGlobalOptions, 11)).toEqual({
     ...rest,
-    lineLevels: [100, 1000],
+    thresholds: [100, 1000],
+    lineLevels: undefined,
     polygonLevels: undefined,
   });
   expect(getOptionsForZoom(fullGlobalOptions, 12)).toEqual({
     ...rest,
-    lineLevels: [100, 1000],
+    thresholds: [100, 1000],
+    lineLevels: undefined,
     polygonLevels: undefined,
   });
 });
