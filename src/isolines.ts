@@ -180,13 +180,18 @@ export default function generateIsolines(
   extent: number = 4096,
   buffer: number = 1,
 ): { [ele: number]: number[][] } {
-  if (!intervalOrLevels || (Array.isArray(intervalOrLevels) && intervalOrLevels.length === 0)) {
+  if (
+    !intervalOrLevels ||
+    (Array.isArray(intervalOrLevels) && intervalOrLevels.length === 0)
+  ) {
     return {};
   }
 
   // Check if using interval or specific levels
-  const isInterval = typeof intervalOrLevels === 'number';
-  const levels = isInterval ? null : [...intervalOrLevels].sort((a, b) => a - b);
+  const isInterval = typeof intervalOrLevels === "number";
+  const levels = isInterval
+    ? null
+    : [...intervalOrLevels].sort((a, b) => a - b);
 
   const multiplier = extent / (tile.width - 1);
   let tld: number, trd: number, bld: number, brd: number;
@@ -256,7 +261,7 @@ export default function generateIsolines(
         }
       } else {
         // Filter levels that fall within this cell's range
-        thresholds = levels!.filter(level => level >= min && level <= max);
+        thresholds = levels!.filter((level) => level >= min && level <= max);
       }
 
       for (const threshold of thresholds) {

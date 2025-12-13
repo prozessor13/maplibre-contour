@@ -188,7 +188,6 @@ export class LocalDemManager implements DemManager {
       spotLayer = "spot-soundings",
     } = options;
 
-    console.log(thresholds, lineLevels, polygonLevels)
 
     // no levels means less than min zoom with levels specified
     if (
@@ -317,7 +316,16 @@ export class LocalDemManager implements DemManager {
         // Generate spot soundings
         if (spotGridSpacing) {
           const spacingInExtent = (spotGridSpacing / 512) * extent;
-          const gridPoints = generateJitteredGrid(0, 0, extent, extent, spacingInExtent, x, y, z);
+          const gridPoints = generateJitteredGrid(
+            0,
+            0,
+            extent,
+            extent,
+            spacingInExtent,
+            x,
+            y,
+            z,
+          );
           for (const [px, py] of gridPoints) {
             const tileX = Math.floor((px / extent) * virtualTile.width);
             const tileY = Math.floor((py / extent) * virtualTile.height);
@@ -347,9 +355,12 @@ export class LocalDemManager implements DemManager {
 
         mark?.();
         const layers: any = {};
-        if (lineFeatures.length) layers[contourLayer] = { features: lineFeatures };
-        if (polygonFeatures.length) layers[polygonLayer] = { features: polygonFeatures };
-        if (pointFeatures.length) layers[spotLayer] = { features: pointFeatures };
+        if (lineFeatures.length)
+          layers[contourLayer] = { features: lineFeatures };
+        if (polygonFeatures.length)
+          layers[polygonLayer] = { features: polygonFeatures };
+        if (pointFeatures.length)
+          layers[spotLayer] = { features: pointFeatures };
         const result = encodeVectorTile({
           extent,
           layers,
