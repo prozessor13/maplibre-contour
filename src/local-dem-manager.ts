@@ -175,6 +175,8 @@ export class LocalDemManager implements DemManager {
       extent = 4096,
       subsampleBelow = 100,
       contourLayer = "contours",
+      polygonLayer = "areas",
+      thresholds,
       lineLevels,
       polygonLevels,
       elevationKey = "ele",
@@ -185,6 +187,8 @@ export class LocalDemManager implements DemManager {
       spotSortOrder = "desc",
       spotLayer = "spot-soundings",
     } = options;
+
+    console.log(thresholds, lineLevels, polygonLevels)
 
     // no levels means less than min zoom with levels specified
     if (
@@ -237,12 +241,14 @@ export class LocalDemManager implements DemManager {
           .scaleElevation(multiplier)
           .materialize(1);
 
-        const features = [] as any;
+        const lineFeatures = [] as any;
+        const polygonFeatures = [] as any;
+        const pointFeatures = [] as any;
 
-        // Generate contour lines
-        if (lineLevels && lineLevels.length > 0) {
+        // Generate contour lines for thresholds
+        if (thresholds && thresholds.length > 0) {
           const isolines = generateIsolines(
-            lineLevels[0],
+            thresholds[0],
             virtualTile,
             extent,
             buffer,
@@ -250,14 +256,35 @@ export class LocalDemManager implements DemManager {
 
           Object.entries(isolines).forEach(([eleString, geom]) => {
             const ele = Number(eleString);
-            features.push({
+            lineFeatures.push({
               type: GeomType.LINESTRING,
               geometry: geom,
               properties: {
                 [elevationKey]: ele,
                 [levelKey]: Math.max(
-                  ...lineLevels.map((l, i) => (ele % l === 0 ? i : 0)),
+                  ...thresholds.map((l, i) => (ele % l === 0 ? i : 0)),
                 ),
+              },
+            });
+          });
+        }
+
+        // Generate contour lines
+        if (lineLevels && lineLevels.length > 0) {
+          const isolines = generateIsolines(
+            lineLevels,
+            virtualTile,
+            extent,
+            buffer,
+          );
+
+          Object.entries(isolines).forEach(([eleString, geom]) => {
+            const ele = Number(eleString);
+            lineFeatures.push({
+              type: GeomType.LINESTRING,
+              geometry: geom,
+              properties: {
+                [elevationKey]: ele,
               },
             });
           });
@@ -275,7 +302,7 @@ export class LocalDemManager implements DemManager {
           Object.entries(isobands).map(([rangeStr, geoms]) => {
             const [lower, upper] = rangeStr.split("-").map(Number);
             geoms.map((geom) => {
-              features.push({
+              polygonFeatures.push({
                 type: GeomType.POLYGON,
                 geometry: [geom],
                 properties: {
@@ -288,19 +315,9 @@ export class LocalDemManager implements DemManager {
         }
 
         // Generate spot soundings
-        const spotFeatures = [] as any;
         if (spotGridSpacing) {
           const spacingInExtent = (spotGridSpacing / 512) * extent;
-          const gridPoints = generateJitteredGrid(
-            0,
-            0,
-            extent,
-            extent,
-            spacingInExtent,
-            x,
-            y,
-            z,
-          );
+          const gridPoints = generateJitteredGrid(0, 0, extent, extent, spacingInExtent, x, y, z);
           for (const [px, py] of gridPoints) {
             const tileX = Math.floor((px / extent) * virtualTile.width);
             const tileY = Math.floor((py / extent) * virtualTile.height);
@@ -311,7 +328,7 @@ export class LocalDemManager implements DemManager {
               tileY < virtualTile.height
             ) {
               const elevation = virtualTile.get(tileX, tileY);
-              spotFeatures.push({
+              pointFeatures.push({
                 type: GeomType.POINT,
                 geometry: [[px, py]],
                 properties: {
@@ -321,7 +338,7 @@ export class LocalDemManager implements DemManager {
             }
           }
 
-          spotFeatures.sort((a: any, b: any) => {
+          pointFeatures.sort((a: any, b: any) => {
             const eleA = a.properties[elevationKey];
             const eleB = b.properties[elevationKey];
             return spotSortOrder === "asc" ? eleA - eleB : eleB - eleA;
@@ -329,10 +346,10 @@ export class LocalDemManager implements DemManager {
         }
 
         mark?.();
-        const layers: any = { [contourLayer]: { features } };
-        if (spotFeatures.length > 0) {
-          layers[spotLayer] = { features: spotFeatures };
-        }
+        const layers: any = {};
+        if (lineFeatures.length) layers[contourLayer] = { features: lineFeatures };
+        if (polygonFeatures.length) layers[polygonLayer] = { features: polygonFeatures };
+        if (pointFeatures.length) layers[spotLayer] = { features: pointFeatures };
         const result = encodeVectorTile({
           extent,
           layers,

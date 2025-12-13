@@ -100,7 +100,11 @@ export interface GlobalContourTileOptions extends ContourTileOptions {
 }
 
 export interface IndividualContourTileOptions extends ContourTileOptions {
+  /** Intervals for generating contour lines (e.g., [100, 500] for minor=100m, major=500m) */
+  thresholds?: number[];
+  /** Fixed elevation levels for contour lines (e.g., [100, 200, 500, 1000]) */
   lineLevels?: number[];
+  /** Fixed elevation levels for polygons */
   polygonLevels?: number[];
 }
 

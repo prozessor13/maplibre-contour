@@ -175,14 +175,19 @@ function ratio(a: number, b: number, c: number) {
  * contour lines in tile coordinates
  */
 export default function generateIsolines(
-  interval: number,
+  intervalOrLevels: number | number[],
   tile: HeightTile,
   extent: number = 4096,
   buffer: number = 1,
 ): { [ele: number]: number[][] } {
-  if (!interval) {
+  if (!intervalOrLevels || (Array.isArray(intervalOrLevels) && intervalOrLevels.length === 0)) {
     return {};
   }
+
+  // Check if using interval or specific levels
+  const isInterval = typeof intervalOrLevels === 'number';
+  const levels = isInterval ? null : [...intervalOrLevels].sort((a, b) => a - b);
+
   const multiplier = extent / (tile.width - 1);
   let tld: number, trd: number, bld: number, brd: number;
   let r: number, c: number;
@@ -238,9 +243,23 @@ export default function generateIsolines(
       }
       const min = Math.min(minL, minR);
       const max = Math.max(maxL, maxR);
-      const start = Math.ceil(min / interval) * interval;
-      const end = Math.floor(max / interval) * interval;
-      for (let threshold = start; threshold <= end; threshold += interval) {
+
+      // Determine which thresholds to process for this cell
+      let thresholds: number[];
+      if (isInterval) {
+        const interval = intervalOrLevels as number;
+        const start = Math.ceil(min / interval) * interval;
+        const end = Math.floor(max / interval) * interval;
+        thresholds = [];
+        for (let threshold = start; threshold <= end; threshold += interval) {
+          thresholds.push(threshold);
+        }
+      } else {
+        // Filter levels that fall within this cell's range
+        thresholds = levels!.filter(level => level >= min && level <= max);
+      }
+
+      for (const threshold of thresholds) {
         const tl = tld > threshold;
         const tr = trd > threshold;
         const bl = bld > threshold;

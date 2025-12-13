@@ -117,7 +117,8 @@ export function getOptionsForZoom(
 ): IndividualContourTileOptions {
   const { thresholds, lineLevels, polygonLevels, ...rest } = options;
 
-  let lineLevelsForZoom: number[] = [];
+  let thresholdsForZoom: number[] | undefined = undefined;
+  let lineLevelsForZoom: number[] | undefined = undefined;
   let polygonLevelsForZoom: number[] | undefined = undefined;
 
   // Process thresholds (interval-based contour lines)
@@ -127,7 +128,7 @@ export function getOptionsForZoom(
       const z = Number(zString);
       if (z <= zoom && z > maxLessThanOrEqualTo) {
         maxLessThanOrEqualTo = z;
-        lineLevelsForZoom = typeof value === "number" ? [value] : value;
+        thresholdsForZoom = typeof value === "number" ? [value] : value;
       }
     });
   }
@@ -157,6 +158,7 @@ export function getOptionsForZoom(
   }
 
   return {
+    thresholds: thresholdsForZoom,
     lineLevels: lineLevelsForZoom,
     polygonLevels: polygonLevelsForZoom,
     ...rest,
