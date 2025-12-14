@@ -2,7 +2,8 @@ import AsyncCache from "./cache";
 import defaultDecodeImage from "./decode-image";
 import { HeightTile } from "./height-tile";
 import generateIsolines from "./isolines";
-import generateIsobands from "./isobands";
+import generateIsolinesMS from "./isolines-ms";
+import generateIsobandsMS from "./isobands-ms";
 import {
   copy,
   encodeIndividualOptions,
@@ -268,9 +269,9 @@ export class LocalDemManager implements DemManager {
           });
         }
 
-        // Generate contour lines
+        // Generate contour lines (using marching-squares isolines for fixed levels)
         if (lineLevels && lineLevels.length > 0) {
-          const isolines = generateIsolines(
+          const isolines = generateIsolinesMS(
             lineLevels,
             virtualTile,
             extent,
@@ -289,9 +290,9 @@ export class LocalDemManager implements DemManager {
           });
         }
 
-        // Generate contour polygons
+        // Generate contour polygons (using marching-squares isoBands)
         if (polygonLevels && polygonLevels.length > 0) {
-          const isobands = generateIsobands(
+          const isobands = generateIsobandsMS(
             polygonLevels,
             virtualTile,
             extent,
@@ -299,7 +300,8 @@ export class LocalDemManager implements DemManager {
           );
 
           Object.entries(isobands).map(([rangeStr, geoms]) => {
-            const [lower, upper] = rangeStr.split("-").map(Number);
+            // Parse range key (format: "lower:upper" to support negative values)
+            const [lower, upper] = rangeStr.split(":").map(Number);
             geoms.map((geom) => {
               polygonFeatures.push({
                 type: GeomType.POLYGON,

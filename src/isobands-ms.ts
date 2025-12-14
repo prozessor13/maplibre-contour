@@ -15,17 +15,22 @@ import type { HeightTile } from "./height-tile";
  * - Polygon(s) for areas between 700-900m
  * - Polygon(s) for areas between 900-1000m
  *
- * @param levels Array of elevation levels (e.g., [500, 700, 900, 1000])
+ * For bathymetry with negative levels [-100, -75, -50, 0], it creates:
+ * - Polygon(s) for areas between -100 and -75m
+ * - Polygon(s) for areas between -75 and -50m
+ * - Polygon(s) for areas between -50 and 0m
+ *
+ * @param levels Array of elevation levels (e.g., [500, 700, 900, 1000] or [-100, -75, -50, 0])
  * @param tile The input height tile
  * @param extent Vector tile extent (default 4096)
  * @param buffer How many pixels into each neighboring tile to include
- * @returns Object mapping "lower-upper" ranges to arrays of polygons
+ * @returns Object mapping "lower:upper" ranges to arrays of polygons (e.g., "500:700" or "-100:-75")
  */
 export default function generateIsobands(
   levels: number[] | string,
   tile: HeightTile,
   extent: number = 4096,
-  buffer: number = 1,
+  _buffer: number = 1,
 ): { [key: string]: number[][] } {
   // Handle string input (from URL encoding) by parsing as array
   let levelArray: number[];
@@ -63,7 +68,8 @@ export default function generateIsobands(
   for (let i = 0; i < sortedLevels.length - 1; i++) {
     const lowerLevel = sortedLevels[i];
     const upperLevel = sortedLevels[i + 1];
-    const rangeKey = `${lowerLevel}-${upperLevel}`;
+    // Use colon separator to avoid issues with negative values (e.g., "-100--75" becomes "-100:-75")
+    const rangeKey = `${lowerLevel}:${upperLevel}`;
 
     try {
       // Use marching-squares to generate bands

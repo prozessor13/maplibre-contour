@@ -1,5 +1,6 @@
 import generateIsolines from "./isolines";
-import generateIsobands from "./isobands";
+import generateIsolinesMS from "./isolines-ms";
+import generateIsobandsMS from "./isobands-ms";
 import { DemSource } from "./dem-source";
 import { decodeParsedImage } from "./decode-image";
 import { LocalDemManager } from "./local-dem-manager";
@@ -8,7 +9,8 @@ import { HeightTile } from "./height-tile";
 
 const exported = {
   generateIsolines,
-  generateIsobands,
+  generateIsolinesMS,
+  generateIsobandsMS,
   DemSource,
   HeightTile,
   LocalDemManager,

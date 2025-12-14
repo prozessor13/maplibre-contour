@@ -165,9 +165,12 @@ function ratio(a: number, b: number, c: number) {
 }
 
 /**
- * Generates contour lines from a HeightTile
+ * Generates contour lines from a HeightTile using the custom d3-contour algorithm.
  *
- * @param interval Vertical distance between contours
+ * This implementation is used for THRESHOLD-based (interval) contour generation.
+ * For fixed LEVEL-based contours, use isolines-ms.ts instead (marching-squares library).
+ *
+ * @param intervalOrLevels Vertical distance between contours (number) or array of specific levels
  * @param tile The input height tile, where values represent the height at the top-left of each pixel
  * @param extent Vector tile extent (default 4096)
  * @param buffer How many pixels into each neighboring tile to include in a tile
